@@ -37,7 +37,7 @@ fn main() -> Result<()> {
     // Ok(())
 }
 
-fn init() ->  Result<Bme280<I2cDriver, Delay>>{
+fn init() ->  Result<Bme280<I2cDriver<'static>, Delay>>{
     log::info!("Initialising...");
 
     esp_idf_svc::sys::link_patches();
@@ -63,7 +63,7 @@ fn init() ->  Result<Bme280<I2cDriver, Delay>>{
     ", SENSOR_MODE, GLOBAL_OVERSAMPLING);
 
     let configuration = generate_sampling_configuration();
-    bme280.set_configuration(configuration)?;
+    bme280.set_sampling_configuration(configuration)?;
 
     log::info!("Initialising completed.");
 
@@ -72,10 +72,11 @@ fn init() ->  Result<Bme280<I2cDriver, Delay>>{
 
 fn print_measurement(bme280: &mut Bme280<I2cDriver, Delay>) -> Result<()> {
     // TODO: Error Handling & more sophisticated code
-    let measurements = bme280.measure()?;
-    log::info!("Temperature: {}°C", measurements.temperature);
-    log::info!("Pressure: {}hPa", measurements.pressure);
-    log::info!("Humidity: {}%", measurements.humidity);
+    // TODO: Enable support for disabled measurements
+    let measurements = bme280.read_sample()?;
+    log::info!("Temperature: {}°C", measurements.0.unwrap());
+    log::info!("Pressure: {}hPa", measurements.1.unwrap());
+    log::info!("Humidity: {}%", measurements.2.unwrap());
     Ok(())
 }
 
@@ -102,7 +103,7 @@ fn generate_sampling_configuration() -> BME280_Configuration {
         .with_sensor_mode(SENSOR_MODE)
 }
 
-fn init_i2c_bus() -> Result<I2cDriver> {
+fn init_i2c_bus() -> Result<I2cDriver<'static>> {
     log::info!("Taking I2C at i2c0");
 
     let peripherals = Peripherals::take()?;
@@ -110,8 +111,8 @@ fn init_i2c_bus() -> Result<I2cDriver> {
     let sda = peripherals.pins.gpio5;
     let scl = peripherals.pins.gpio6;
 
-    let config = I2cConfig::new()?;
-    let i2c = I2cDriver::new(i2c, sda, scl, config)?;
+    let config = I2cConfig::new();
+    let i2c = I2cDriver::new(i2c, sda, scl, &config)?;
 
     Ok(i2c)
 }

@@ -30,8 +30,6 @@ esp-idf-hal = "0.42.5"
 bme280-rs = "0.1.0"
 serde = "1.0.193"
 anyhow = "1.0.75"
-smol = "1.3.0"
-# embedded-hal = "1.0.0-rc.1"
 
 [build-dependencies]
 embuild = "0.31.3"
