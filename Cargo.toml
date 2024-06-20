@@ -4,13 +4,13 @@ version = "0.1.0"
 authors = ["Maximilian Wolf <github@wolf-max.com>"]
 edition = "2021"
 resolver = "2"
-rust-version = "1.71"
+rust-version = "1.77"
 
 [profile.release]
 opt-level = "s"
 
 [profile.dev]
-debug = true    # Symbols are nice and they don't increase the size on Flash
+debug = true
 opt-level = "z"
 
 [features]
@@ -25,9 +25,10 @@ embassy = ["esp-idf-svc/embassy-sync", "esp-idf-svc/critical-section", "esp-idf-
 
 [dependencies]
 log = { version = "0.4", default-features = false }
-esp-idf-svc = { version = "0.47.3", default-features = false }
-esp-idf-hal = "0.42.5"
-bme280-rs = "0.1.0"
+esp-idf-svc = { version = "^0.48.1", default-features = false }
+esp-idf-hal = "^0.43.1"
+#bme280-rs = "0.1.0"
+bme280="0.5.1"
 serde = "1.0.193"
 anyhow = "1.0.75"
 
