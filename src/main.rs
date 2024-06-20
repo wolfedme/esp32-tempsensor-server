@@ -2,65 +2,99 @@
 
 mod config;
 
-use crate::config::{GLOBAL_OVERSAMPLING, HUMIDITY_MEASURING_ENABLED, MEASUREMENT_DELAY, PRESSURE_MEASURING_ENABLED, SENSOR_MODE, TEMPERATURE_MEASURING_ENABLED};
+use std::any::Any;
+use crate::config::{
+    GLOBAL_OVERSAMPLING, HUMIDITY_MEASURING_ENABLED, MEASUREMENT_DELAY, PRESSURE_MEASURING_ENABLED,
+    SENSOR_MODE, TEMPERATURE_MEASURING_ENABLED,
+};
 
-use std::time::Duration;
 use anyhow::{Error, Result};
-use bme280_rs::{Bme280, Oversampling};
 use bme280_rs::Configuration as BME280_Configuration;
-use esp_idf_hal::delay::{Delay};
+use bme280_rs::{Bme280, Oversampling};
+use esp_idf_hal::delay::{Delay, FreeRtos};
 use esp_idf_hal::i2c::I2cConfig;
 use esp_idf_hal::prelude::Peripherals;
 use esp_idf_svc::hal::i2c::I2cDriver;
-
+use std::time::Duration;
+use esp_idf_hal::sys::EspError;
+use esp_idf_svc::tls::Config;
 
 fn main() -> Result<()> {
+    // Links to the final executable
+    esp_idf_svc::sys::link_patches();
+    esp_idf_svc::log::EspLogger::initialize_default();
+    log::set_max_level(log::LevelFilter::Debug);
+
+    log::info!("Log Level: {}", log::max_level());
+    log::debug!("Linked patches and initialized default EspLogger");
+
+    // Main loop
     log::info!("Starting BME280 Server");
     let mut bme280 = match init() {
         Ok(bme280) => bme280,
         Err(e) => {
             log::error!("Error while initialising: {}", e);
-            return Err(Error::msg("Error while initialising"));
+            panic!("{}", e);
         }
     };
 
+    log::info!("BME280\nChip ID: {}\nStatus: {}, Humidity test: {:?}",
+        bme280.chip_id()?, bme280.status()?, bme280.read_humidity()?);
+
     loop {
+        log::debug!("Measuring Loop start.");
+
         match print_measurement(&mut bme280) {
-            Ok(_) => (),
+            Ok(_) => {
+                log::debug!("print_measurement OK");
+            },
             Err(e) => {
                 log::error!("Error while measuring: {}", e);
                 return Err(Error::msg("Error while measuring"));
             }
         }
-    };
-    // TODO: Error Handling
-    // Ok(())
-}
 
-fn init() ->  Result<Bme280<I2cDriver<'static>, Delay>>{
-    log::info!("Initialising...");
-
-    esp_idf_svc::sys::link_patches();
-    esp_idf_svc::log::EspLogger::initialize_default();
-
-    let i2c_bus = init_i2c_bus()?;
-
-    log::info!("Standard delay of {:?} between measurements", MEASUREMENT_DELAY);
-
-    if Duration::as_millis(&MEASUREMENT_DELAY) < 10 {
-        log::warn!("Delay is smaller than 10. This could starve FreeRTOS IDLE tasks.");
+        log::debug!("Measuring Loop end. Waiting for {}", MEASUREMENT_DELAY.as_millis());
+        // Delay next measurement
+        FreeRtos::delay_ms(MEASUREMENT_DELAY.as_millis() as u32);
     }
 
-    // TODO: Check docs if this takes millis?
+    // TODO: Error Handling
+    Ok(())
+}
+
+fn init() -> Result<Bme280<I2cDriver<'static>, Delay>> {
+    log::info!("Initialising...");
+
+    let i2c_bus = match init_i2c_bus() {
+        Ok(i2c_bus) => i2c_bus,
+        Err(e) => {
+            return Err(e);
+        }
+    };
+
+    log::info!(
+        "Standard delay of {:?} between measurements",
+        MEASUREMENT_DELAY
+    );
+
+    if Duration::as_millis(&MEASUREMENT_DELAY) < 10 {
+        log::warn!("Delay is smaller than 10ms. This could starve FreeRTOS IDLE tasks.");
+    }
+
     let delay = Delay::new(MEASUREMENT_DELAY.as_millis() as u32);
     let mut bme280 = Bme280::new(i2c_bus, delay);
 
-    log::info!("
+    log::info!(
+        "
     Setting sampling configuration to:\n\n
 
     Sensor Mode: {:?}\n
     Global Oversampling: {:?}\n
-    ", SENSOR_MODE, GLOBAL_OVERSAMPLING);
+    ",
+        SENSOR_MODE,
+        GLOBAL_OVERSAMPLING
+    );
 
     let configuration = generate_sampling_configuration();
     bme280.set_sampling_configuration(configuration)?;
@@ -106,13 +140,31 @@ fn generate_sampling_configuration() -> BME280_Configuration {
 fn init_i2c_bus() -> Result<I2cDriver<'static>> {
     log::info!("Taking I2C at i2c0");
 
-    let peripherals = Peripherals::take()?;
+    let peripherals = match Peripherals::take() {
+        Ok(peripherals) => peripherals,
+        Err(e) => {
+            return Err(Error::new(e));
+        }
+    };
+
+    log::info!("Peripherals taken {:?}", peripherals.type_id());
+
     let i2c = peripherals.i2c0; // TODO: Check I2C Bus address
     let sda = peripherals.pins.gpio5;
     let scl = peripherals.pins.gpio6;
 
-    let config = I2cConfig::new();
-    let i2c = I2cDriver::new(i2c, sda, scl, &config)?;
+    log::debug!("i2c0, gpio5, gpio6");
 
+    let i2c = match I2cDriver::new(i2c, sda, scl, &I2cConfig::new()) {
+        Ok(i2c) => i2c,
+        Err(e) => {
+            log::error!("Issue while creating I2cDriver: {}: {}", e.code(), e.to_string());
+            return Err(Error::new(e));
+        }
+    };
+
+    log::info!("i2cdriver created with given config.");
+
+    log::info!("I2C at i2c0 taken. TypeId {:?}", i2c.type_id());
     Ok(i2c)
 }
