@@ -1,12 +1,15 @@
-use bme280_rs::{Oversampling, SensorMode};
+use bme280::Oversampling;
+use bme280::SensorMode;
 use std::time::Duration;
+
+// TODO: Remove unused config or introduce ways to disable
 
 /// Sensor Mode used for measuring. Normal is measuring at regular times,
 /// Forced only once and then enters Sleep.
 pub static SENSOR_MODE: SensorMode = SensorMode::Normal;
 
-// Oversampling mode, whereas Oversample1 is collecting a single sample, etc.
-pub static GLOBAL_OVERSAMPLING: Oversampling = Oversampling::Oversample1;
+// Oversampling mode
+pub static GLOBAL_OVERSAMPLING: Oversampling = Oversampling::Oversampling2X;
 
 /// Enable Temperature measurement.
 pub static TEMPERATURE_MEASURING_ENABLED: bool = true;

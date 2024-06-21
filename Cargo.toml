@@ -21,14 +21,18 @@ std = ["alloc", "esp-idf-svc/binstart", "esp-idf-svc/std"]
 alloc = ["esp-idf-svc/alloc"]
 nightly = ["esp-idf-svc/nightly"]
 experimental = ["esp-idf-svc/experimental"]
-embassy = ["esp-idf-svc/embassy-sync", "esp-idf-svc/critical-section", "esp-idf-svc/embassy-time-driver"]
+embassy = [
+    "esp-idf-svc/embassy-sync",
+    "esp-idf-svc/critical-section",
+    "esp-idf-svc/embassy-time-driver",
+]
 
 [dependencies]
 log = { version = "0.4", default-features = false }
 esp-idf-svc = { version = "^0.48.1", default-features = false }
 esp-idf-hal = "^0.43.1"
 #bme280-rs = "0.1.0"
-bme280="0.5.1"
+bme280 = "0.5.1"
 serde = "1.0.193"
 anyhow = "1.0.75"
 
