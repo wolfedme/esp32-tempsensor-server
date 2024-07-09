@@ -29,12 +29,12 @@ embassy = [
 
 [dependencies]
 log = { version = "0.4", default-features = false }
-esp-idf-svc = { version = "^0.48.1", default-features = false }
-esp-idf-hal = "^0.43.1"
+esp-idf-svc = { version = "^0.49.1", default-features = false }
+esp-idf-hal = "^0.44.1"
 #bme280-rs = "0.1.0"
 bme280 = "0.5.1"
 serde = "1.0.193"
 anyhow = "1.0.75"
 
 [build-dependencies]
-embuild = "0.31.3"
+embuild = "0.32.0"
